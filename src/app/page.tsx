@@ -1,103 +1,153 @@
-import Image from "next/image";
+"use client";
+import React, { useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Toaster, toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ username: "", password: "" });
+  const [actionType, setActionType] = useState<"login" | "signup" | null>(null);
+  const router = useRouter()
+  const validateUsername = (name: string) => {
+    if (!name.trim()) return "Username is required";
+    if (name.length < 3) return "Username must be at least 3 characters";
+    if (name.length > 20) return "Username must be less than 20 characters";
+    if (!/^[a-zA-Z0-9]+$/.test(name))
+      return "Username can only contain letters and numbers";
+    return "";
+  };
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const validatePassword = (pass: string) => {
+    if (!pass.trim()) return "Password is required";
+    if (pass.length < 6) return "Password must be at least 6 characters";
+    if (pass.length > 20) return "Password must be less than 20 characters";
+    if (!/[A-Z]/.test(pass))
+      return "Password must contain at least one uppercase letter";
+    if (!/[a-z]/.test(pass))
+      return "Password must contain at least one lowercase letter";
+    if (!/[0-9]/.test(pass))
+      return "Password must contain at least one number";
+    if (!/[!@#$%^&*()_+\-=[\]{};':\"\\|,.<>/?]/.test(pass))
+      return "Password must contain at least one special character";
+    return "";
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const usernameError = validateUsername(username);
+    const passwordError = validatePassword(password);
+
+    setErrors({
+      username: usernameError,
+      password: passwordError,
+    });
+
+    if (usernameError || passwordError || !actionType) return;
+
+    const endpoint = actionType === "login" ? "/api/Login" : "/api/Signup";
+
+    const toastId = toast.loading(
+      actionType === "login" ? "Logging in..." : "Signing up..."
+    );
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+      if (actionType === "login") {
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          toast.success("Login successful", { id: toastId });
+          localStorage.setItem("username",username)
+          router.push("/Codeflamepad")
+        } else {
+          toast.error(data.error || "Login failed", { id: toastId });
+        }
+      } else if (actionType === "signup") {
+        if (data.message) {
+          toast.success(data.message, { id: toastId });
+        } else {
+          toast.error(data.error || "Signup failed", { id: toastId });
+        }
+      }
+    } catch (error) {
+      toast.error("Something went wrong", { id: toastId });
+    }
+
+    setActionType(null);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-200 px-4">
+      <Toaster  position="top-center" />
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-10 space-y-6"
+      >
+        <h1 className="text-4xl font-bold text-center text-gray-800">
+          CodeflamePad
+        </h1>
+
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className={`w-full px-4 py-3 border-b outline-none text-lg ${
+            errors.username ? "border-red-500" : ""
+          }`}
+        />
+        {errors.username && (
+          <p className="text-red-500 text-sm mt-1">{errors.username}</p>
+        )}
+
+        {/* Password Field with Eye Toggle */}
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={`w-full px-4 py-3 border-b outline-none text-lg pr-12 ${
+              errors.password ? "border-red-500" : ""
+            }`}
+          />
+          <span
+            className="absolute right-4 top-3.5 text-xl text-gray-600 cursor-pointer"
+            onClick={() => setShowPassword(!showPassword)}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+          </span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        {errors.password && (
+          <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+        )}
+
+        <div className="flex items-center justify-between gap-4 pt-2">
+          <button
+            type="submit"
+            onClick={() => setActionType("login")}
+            className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200"
+          >
+            Login
+          </button>
+          <button
+            type="submit"
+            onClick={() => setActionType("signup")}
+            className="w-full cursor-pointer bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-200"
+          >
+            Signup
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
