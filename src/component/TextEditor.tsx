@@ -95,7 +95,7 @@ export default function Main() {
         setCurrentFile={setCurrentFile}
       />
       <EditorContent editor={editor} />
-      <Footer/>
+      
       <button
         onClick={saveContent}
         disabled={saving}

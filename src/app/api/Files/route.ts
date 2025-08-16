@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose"
 import connectDB from "@/lib/db";
 import codeflamepad from "@/models/codeflamepad";
 import { JWTverify } from "@/app/middleware/JWTverify";
@@ -57,4 +58,35 @@ export async function POST(req: NextRequest) {
     console.error("POST error:", err);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
+}
+export async function DELETE(req: NextRequest) {
+  await connectDB();
+
+  const user = JWTverify(req);
+  if (user instanceof NextResponse) {
+    return user; // Unauthorized, redirect
+  }
+
+  const { fileId } = await req.json();
+
+  if (!fileId) {
+    return NextResponse.json({ message: "fileId is required" }, { status: 400 });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(fileId)) {
+    return NextResponse.json({ message: "Invalid file ID" }, { status: 400 });
+  }
+
+  // ✅ Delete the file from user's "files" array using $pull
+  const result = await codeflamepad.findOneAndUpdate(
+    { _id: user.id },
+    { $pull: { files: { _id: fileId } } },
+    { new: true }
+  );
+  console.log(result)
+  if (!result) {
+    return NextResponse.json({ message: "File not found or unauthorized" }, { status: 404 });
+  }
+
+  return NextResponse.json(result.files, { status: 200 });
 }
