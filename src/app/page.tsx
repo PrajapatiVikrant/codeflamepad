@@ -79,6 +79,7 @@ export default function Home() {
         }
       }
     } catch (error) {
+      console.log('error login-----',error)
       toast.error("Something went wrong", { id: toastId });
     }
 
