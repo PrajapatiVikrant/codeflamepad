@@ -35,7 +35,7 @@ export default function Main() {
     content: '', // initially blank
     editorProps: {
       attributes: {
-        class: 'bg-white h-[60vh] overflow-auto p-4 rounded-md shadow-xs outline-none',
+        class: 'bg-white h-[60vh] p-4 overflow-auto rounded-md shadow-xs outline-none',
       },
     },
   });
